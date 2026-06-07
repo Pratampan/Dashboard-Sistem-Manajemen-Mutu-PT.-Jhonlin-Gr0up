@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Audit PT Jhonlin Group - Final</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f4f4f4; }
+header { background:#004d2e; color:white; padding:15px; display:flex; align-items:center; }
+header img { height:50px; margin-right:15px; }
+header h1 { margin:0; font-size:24px; }
+.container { padding:20px; }
+table { border-collapse: collapse; width:100%; background:white; margin-bottom:20px; }
+th, td { border:1px solid #ddd; padding:8px; text-align:left; cursor:pointer; }
+th { background:#004d2e; color:white; }
+canvas { background:white; padding:20px; margin-bottom:30px; }
+button { padding: 8px 12px; margin-right:10px; margin-top:10px; cursor:pointer;}
+input[type="text"] { padding:5px; margin-bottom:10px; width:200px; }
+</style>
+</head>
+<body>
+
+<header>
+    <img src="1000505802.jpg" alt="Jhonlin Group Logo">
+    <h1>Dashboard Audit PT Jhonlin Group</h1>
+</header>
+
+<div class="container">
+    <h2>Filter / Cari Temuan</h2>
+    <input type="text" id="searchBox" placeholder="Cari teks...">
+
+    <div>
+        <button id="exportExcel">Export Excel</button>
+        <button id="exportPDF">Export PDF</button>
+    </div>
+
+    <h2>Ringkasan Status Temuan</h2>
+    <canvas id="statusChart" width="400" height="200"></canvas>
+
+    <h2>Jumlah Temuan per Kategori Klausul</h2>
+    <canvas id="kategoriChart" width="400" height="200"></canvas>
+
+    <h2>Detail Temuan</h2>
+    <table id="auditTable">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Uraian</th>
+                <th>Kategori Klausul</th>
+                <th>Nama Bagian</th>
+                <th>Analisis Penyebab</th>
+                <th>Tindakan Koreksi</th>
+                <th>Bukti Tindakan Koreksi</th>
+                <th>Tindakan Korektif</th>
+                <th>Bukti Tindakan Korektif</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const auditData = [
+  {No:1,Uraian:"Belum mencantumkan kegiatan usaha di kantor",Kategori:"2",Status:"Memenuhi"},
+  {No:2,Uraian:"Belum ada penetapan General Manager dan Manager Lab",Kategori:"2",Status:"Memenuhi"},
+  {No:3,Uraian:"Pemantauan kompetensi personal tidak terdokumentasi",Kategori:"2",Status:"Memenuhi"},
+  {No:4,Uraian:"Kalibrasi peralatan belum lengkap",Kategori:"2",Status:"Memenuhi"},
+  {No:5,Uraian:"Witness pengujian sieve test belum dilakukan",Kategori:"2",Status:"Memenuhi"},
+  {No:6,Uraian:"Evaluasi ketidakpastian pengukuran belum dilakukan",Kategori:"2",Status:"Memenuhi"},
+  {No:7,Uraian:"Pengendalian mutu internal untuk HGI belum dilakukan",Kategori:"2",Status:"Memenuhi"},
+  {No:8,Uraian:"Laporan hasil uji belum mencantumkan metode spesifik",Kategori:"2",Status:"Memenuhi"},
+  {No:9,Uraian:"Dokumen pengendalian rekaman belum lengkap",Kategori:"2",Status:"Memenuhi"},
+  {No:10,Uraian:"Identifikasi risiko belum lengkap",Kategori:"2",Status:"Memenuhi"},
+  {No:11,Uraian:"Proses peningkatan berkelanjutan tidak terdokumentasi",Kategori:"2",Status:"Memenuhi"},
+  {No:12,Uraian:"Evaluasi eksternal penyedia jasa belum dilakukan",Kategori:"2",Status:"Memenuhi"},
+  {No:13,Uraian:"Verifikasi metode ISO/ASTM belum lengkap",Kategori:"2",Status:"Memenuhi"},
+  {No:14,Uraian:"Performace check instrument CHN belum dilakukan",Kategori:"2",Status:"Memenuhi"},
+  {No:15,Uraian:"Unjuk kinerja oven moisture dan sieve test belum lengkap",Kategori:"2",Status:"Memenuhi"},
+  {No:16,Uraian:"Observasi ketidaksesuaian pengendalian dokumen",Kategori:"Observasi",Status:"Memenuhi"},
+  {No:17,Uraian:"Observasi ketidaksesuaian pemantauan suhu ruangan",Kategori:"Observasi",Status:"Memenuhi"},
+  {No:18,Uraian:"Observasi ketidaksesuaian prosedur internal audit",Kategori:"Observasi",Status:"Memenuhi"}
+];
+
+let statusChart, kategoriChart;
+
+function renderDashboard(filteredData = auditData) {
+    const tbody = document.querySelector("#auditTable tbody");
+    tbody.innerHTML = '';
+    filteredData.forEach(item=>{
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.No}</td><td>${item.Uraian}</td><td>${item.Kategori}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>${item.Status}</td>`;
+        tbody.appendChild(row);
+    });
+
+    const statusCounts = filteredData.reduce((acc,item)=>{acc[item.Status]=(acc[item.Status]||0)+1;return acc;},{}) ;
+    if(statusChart) statusChart.destroy();
+    const ctxStatus = document.getElementById('statusChart').getContext('2d');
+    statusChart = new Chart(ctxStatus,{type:'pie',data:{labels:Object.keys(statusCounts),datasets:[{data:Object.values(statusCounts),backgroundColor:['#28a745','#dc3545']}]}});
+
+    const kategoriCounts = filteredData.reduce((acc,item)=>{acc[item.Kategori]=(acc[item.Kategori]||0)+1;return acc;},{}) ;
+    if(kategoriChart) kategoriChart.destroy();
+    const ctxKategori = document.getElementById('kategoriChart').getContext('2d');
+    kategoriChart = new Chart(ctxKategori,{type:'bar',data:{labels:Object.keys(kategoriCounts),datasets:[{data:Object.values(kategoriCounts),backgroundColor:['#007bff','#ffc107','#17a2b8']}]},options:{scales:{y:{beginAtZero:true,stepSize:1}}}});
+}
+
+document.getElementById('searchBox').addEventListener('input', e=>{
+    const query = e.target.value.toLowerCase();
+    const filtered = auditData.filter(item=>item.Uraian.toLowerCase().includes(query) || item.Kategori.toLowerCase().includes(query) || item.Status.toLowerCase().includes(query));
+    renderDashboard(filtered);
+});
+
+document.getElementById('exportExcel').addEventListener('click',()=>{
+    const ws = XLSX.utils.json_to_sheet(auditData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"Audit");
+    XLSX.writeFile(wb,"Audit_Jhonlin.xlsx");
+});
+
+document.getElementById('exportPDF').addEventListener('click',()=>{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 10;
+    doc.setFontSize(12);
+    auditData.forEach(item=>{doc.text(`No:${item.No} | Uraian:${item.Uraian} | Kategori:${item.Kategori} | Status:${item.Status}`,10,y);y+=7;});
+    doc.save("Audit_Jhonlin.pdf");
+});
+
+renderDashboard();
+</script>
+</body>
+</html>
